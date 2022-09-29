@@ -38,3 +38,9 @@ let transfer (contract: t) (sender: address) (receiver: address) (amount:nat) =
 				Some (Tezos.transaction [{from_=sender;tx=[{to_=receiver;token_id=id;amount=amount}]}] 0tez contract)
 		| 	None -> None
 		)
+
+let transfer_exn (contract: t) (sender: address) (receiver: address) (amount:nat) =
+	Option.unopt_with_error
+		(transfer contract sender receiver amount)
+		"Contract not found"
+
