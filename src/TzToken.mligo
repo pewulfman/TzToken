@@ -19,13 +19,26 @@ type t =
 let transfer (contract: t) (sender: address) (receiver: address) (amount:nat) =
 	match contract with
 		XTZ ->
+		let amount = amount * 1mutez in
+		(* Handling The native token is a special case which requires special logic *)
+		let () = if (sender <> Tezos.get_self_address ()) then (
+			(* Case 1:  The sender is not the contract
+				check the quantity is correct and do a transaction *)
+			if (Tezos.get_amount () < amount) then
+				failwith "Not enough token transfered to contract"
+		) else (
+			(* Case 2: The sender is the contract.
+				Check that there is enough balance.
+				 -> This is done by the protocol *)
+			()
+		) in
 		(match (Tezos.get_contract_opt receiver : unit contract option) with
-			Some contract ->
-				if Tezos.get_sender () = sender then
-					Some (Tezos.transaction () (amount * 1mutez) contract)
-				else None
-		| 	None -> None
-		)
+				Some contract ->
+					if Tezos.get_sender () = sender then
+						Some (Tezos.transaction () amount contract)
+					else None
+			| 	None -> None
+			)
 	|	FA1 (address) ->
 		(match (Tezos.get_entrypoint_opt "%transfer" address : FA1.transfer contract option) with
 			Some contract ->
