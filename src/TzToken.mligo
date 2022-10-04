@@ -10,6 +10,11 @@
 #import "interfaces/FA1.2.mligo" "FA1"
 #import "interfaces/FA2.mligo" "FA2"
 
+module Errors = struct
+	let contractNotFound = "Contract not found"
+	let notEnoughToken   = "Not enough token transfered to contract"
+	let wrongSender      = "CannotTransfertTezFromOtherThanTheSender"
+end
 
 type t =
 	XTZ of unit (* For handling native Tezos token *)
@@ -19,41 +24,40 @@ type t =
 let transfer (contract: t) (sender: address) (receiver: address) (amount:nat) =
 	match contract with
 		XTZ ->
-		let amount = amount * 1mutez in
-		(* Handling The native token is a special case which requires special logic *)
-		let () = if (sender <> Tezos.get_self_address ()) then (
-			(* Case 1:  The sender is not the contract
-				check the quantity is correct and do a transaction *)
-			if (Tezos.get_amount () < amount) then
-				failwith "Not enough token transfered to contract"
-		) else (
-			(* Case 2: The sender is the contract.
-				Check that there is enough balance.
-				 -> This is done by the protocol *)
-			()
-		) in
-		(match (Tezos.get_contract_opt receiver : unit contract option) with
-				Some contract ->
-					if Tezos.get_sender () = sender then
-						Some (Tezos.transaction () amount contract)
-					else None
-			| 	None -> None
+			let contract = Tezos.get_self_address () in
+			let amount = amount * 1mutez in
+			(* Handling The native token is a special case which requires special logic *)
+			let () = if (sender <> contract) then (
+				(* Case 1:  The sender is not the contract
+					check the quantity is correct and do a transaction *)
+				if (Tezos.get_amount () < amount) then
+					failwith Errors.notEnoughToken
+			) else (
+				(* Case 2: The sender is the contract.
+					Check that there is enough balance.
+					-> This is done by the protocol *)
+				()
+			) in
+			if (receiver = contract) then (None (* do nothing, the protocol already sent the token in the transaction *))
+			else (match (Tezos.get_contract_opt receiver : unit contract option) with
+					Some contract ->
+						if Tezos.get_sender () = sender then
+							Some (Tezos.transaction () amount contract)
+						else failwith Errors.wrongSender
+				| 	None -> failwith Errors.contractNotFound
 			)
 	|	FA1 (address) ->
 		(match (Tezos.get_entrypoint_opt "%transfer" address : FA1.transfer contract option) with
 			Some contract ->
 				Some (Tezos.transaction (sender,(receiver,amount)) 0tez contract)
-		| 	None -> None
+		| 	None -> failwith Errors.contractNotFound
 		)
 	|	FA2 (address,id) ->
 		(match (Tezos.get_entrypoint_opt "%transfer" address : FA2.transfer contract option) with
 			Some contract ->
 				Some (Tezos.transaction [{from_=sender;tx=[{to_=receiver;token_id=id;amount=amount}]}] 0tez contract)
-		| 	None -> None
+		| 	None -> failwith Errors.contractNotFound
 		)
 
-let transfer_exn (contract: t) (sender: address) (receiver: address) (amount:nat) =
-	Option.unopt_with_error
-		(transfer contract sender receiver amount)
-		"Contract not found"
-
+let to_op_list (lst : operation option list) =
+	List.fold_left (fun (acc,op) -> match (op : operation option) with (Some op) -> op::acc | None -> acc) [] lst
