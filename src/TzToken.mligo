@@ -21,6 +21,7 @@ type t =
 |	FA1 of address (* For FA1.2 contract *)
 |	FA2 of (address * nat) (* For FA2 contract *)
 
+
 let transfer (contract: t) (sender: address) (receiver: address) (amount:nat) =
 	match contract with
 		XTZ ->
@@ -30,6 +31,8 @@ let transfer (contract: t) (sender: address) (receiver: address) (amount:nat) =
 			let () = if (sender <> contract) then (
 				(* Case 1:  The sender is not the contract
 					check the quantity is correct and do a transaction *)
+				let () = if (Tezos.get_sender () <> sender) then
+					failwith Errors.wrongSender in
 				if (Tezos.get_amount () < amount) then
 					failwith Errors.notEnoughToken
 			) else (
@@ -41,9 +44,7 @@ let transfer (contract: t) (sender: address) (receiver: address) (amount:nat) =
 			if (receiver = contract) then (None (* do nothing, the protocol already sent the token in the transaction *))
 			else (match (Tezos.get_contract_opt receiver : unit contract option) with
 					Some contract ->
-						if Tezos.get_sender () = sender then
 							Some (Tezos.transaction () amount contract)
-						else failwith Errors.wrongSender
 				| 	None -> failwith Errors.contractNotFound
 			)
 	|	FA1 (address) ->
