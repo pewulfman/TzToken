@@ -17,14 +17,14 @@ module Errors = struct
 end
 
 type t =
-	XTZ of unit (* For handling native Tezos token *)
-|	FA1 of address (* For FA1.2 contract *)
-|	FA2 of (address * nat) (* For FA2 contract *)
+	Xtz of unit (* For handling native Tezos token *)
+|	Fa1 of address (* For FA1.2 contract *)
+|	Fa2 of (address * nat) (* For FA2 contract *)
 
 
 let transfer (contract: t) (sender: address) (receiver: address) (amount:nat) =
 	match contract with
-		XTZ ->
+		Xtz ->
 			let contract = Tezos.get_self_address () in
 			let amount = amount * 1mutez in
 			(* Handling The native token is a special case which requires special logic *)
@@ -47,13 +47,13 @@ let transfer (contract: t) (sender: address) (receiver: address) (amount:nat) =
 							Some (Tezos.transaction () amount contract)
 				| 	None -> failwith Errors.contractNotFound
 			)
-	|	FA1 (address) ->
+	|	Fa1 (address) ->
 		(match (Tezos.get_entrypoint_opt "%transfer" address : FA1.transfer contract option) with
 			Some contract ->
 				Some (Tezos.transaction (sender,(receiver,amount)) 0tez contract)
 		| 	None -> failwith Errors.contractNotFound
 		)
-	|	FA2 (address,id) ->
+	|	Fa2 (address,id) ->
 		(match (Tezos.get_entrypoint_opt "%transfer" address : FA2.transfer contract option) with
 			Some contract ->
 				Some (Tezos.transaction [{from_=sender;tx=[{to_=receiver;token_id=id;amount=amount}]}] 0tez contract)
