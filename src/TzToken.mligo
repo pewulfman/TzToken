@@ -16,11 +16,13 @@ module Errors = struct
 	let wrongSender      = "CannotTransfertTezFromOtherThanTheSender"
 end
 
-type t =
-	Xtz of unit (* For handling native Tezos token *)
+type t = [@layout:comb]
+|	Xtz of unit (* For handling native Tezos token *)
 |	Fa1 of address (* For FA1.2 contract *)
 |	Fa2 of (address * nat) (* For FA2 contract *)
 
+
+type tzAmount = [@layout:comb] {currency : t; amount : nat }
 
 let transfer (contract: t) (sender: address) (receiver: address) (amount:nat) =
 	match contract with
@@ -33,7 +35,7 @@ let transfer (contract: t) (sender: address) (receiver: address) (amount:nat) =
 					check the quantity is correct and do a transaction *)
 				let () = if (Tezos.get_sender () <> sender) then
 					failwith Errors.wrongSender in
-				if (Tezos.get_amount () < amount) then
+				if (Tezos.get_amount () <> amount) then
 					failwith Errors.notEnoughToken
 			) else (
 				(* Case 2: The sender is the contract.
