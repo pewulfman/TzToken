@@ -19,7 +19,7 @@ end
 type t = [@layout:comb]
 |	Xtz of unit (* For handling native Tezos token *)
 |	Fa1 of address (* For FA1.2 contract *)
-|	Fa2 of (address * nat) (* For FA2 contract *)
+|	Fa2 of {address:address; id:nat} (* For FA2 contract *)
 
 
 type tzAmount = [@layout:comb] {currency : t; amount : nat }
@@ -55,7 +55,7 @@ let transfer (contract: t) (sender: address) (receiver: address) (amount:nat) =
 				Some (Tezos.transaction (sender,(receiver,amount)) 0tez contract)
 		| 	None -> failwith Errors.contractNotFound
 		)
-	|	Fa2 (address,id) ->
+	|	Fa2 {address;id} ->
 		(match (Tezos.get_entrypoint_opt "%transfer" address : FA2.transfer contract option) with
 			Some contract ->
 				Some (Tezos.transaction [{from_=sender;tx=[{to_=receiver;token_id=id;amount=amount}]}] 0tez contract)
