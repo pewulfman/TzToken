@@ -13,6 +13,7 @@
 module Errors = struct
 	let contractNotFound = "Contract not found"
 	let notEnoughToken   = "Not enough token transfered to contract"
+	let tooMuchToken   = "Too much token transfered to contract"
 	let wrongSender      = "CannotTransfertTezFromOtherThanTheSender"
 end
 
@@ -29,14 +30,17 @@ let transfer (contract: t) (sender: address) (receiver: address) (amount:nat) =
 		Xtz ->
 			let contract = Tezos.get_self_address () in
 			let amount = amount * 1mutez in
+			let received_amount = Tezos.get_amount () in
 			(* Handling The native token is a special case which requires special logic *)
 			let () = if (sender <> contract) then (
 				(* Case 1:  The sender is not the contract
 					check the quantity is correct and do a transaction *)
 				let () = if (Tezos.get_sender () <> sender) then
 					failwith Errors.wrongSender in
-				if (Tezos.get_amount () <> amount) then
+				if (Tezos.get_amount () < amount) then
 					failwith Errors.notEnoughToken
+				else if (received_amount < amount) then
+				 	failwith Errors.tooMuchToken
 			) else (
 				(* Case 2: The sender is the contract.
 					Check that there is enough balance.
