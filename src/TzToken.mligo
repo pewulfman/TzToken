@@ -37,7 +37,7 @@ let transfer (contract: t) (sender: address) (receiver: address) (amount:nat) =
 					check the quantity is correct and do a transaction *)
 				let () = if (Tezos.get_sender () <> sender) then
 					failwith Errors.wrongSender in
-				if (Tezos.get_amount () < amount) then
+				if (received_amount < amount) then
 					failwith Errors.notEnoughToken
 				else if (received_amount > amount) then
 				 	failwith Errors.tooMuchToken
