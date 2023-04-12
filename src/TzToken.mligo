@@ -39,7 +39,7 @@ let transfer (contract: t) (sender: address) (receiver: address) (amount:nat) =
 					failwith Errors.wrongSender in
 				if (Tezos.get_amount () < amount) then
 					failwith Errors.notEnoughToken
-				else if (received_amount < amount) then
+				else if (received_amount > amount) then
 				 	failwith Errors.tooMuchToken
 			) else (
 				(* Case 2: The sender is the contract.
